@@ -9,8 +9,10 @@ set(Boost_USE_MULTITHREADED ON)
 
 find_package(Boost 1.46  REQUIRED COMPONENTS filesystem system date_time thread program_options)
 
-set(OpenCV_DIR "${PROJECT_SOURCE_DIR}/../aeoon-sambaliblog/libs/opencv")
-find_package( OpenCV REQUIRED )
+if(WIN32)
+	set(OpenCV_DIR "${PROJECT_SOURCE_DIR}/../aeoon-sambaliblog/libs/opencv")
+endif(WIN32)
+#find_package( OpenCV REQUIRED )
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "(GNU|Clang)")
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated")
@@ -22,8 +24,12 @@ add_executable(iomain iomain.cpp)
 
 add_executable(boostmain boostmain.cpp)
 target_include_directories(boostmain PRIVATE ${Boost_INCLUDE_DIR})
-target_link_libraries(boostmain ${Boost_LIBRARIES}
-    wsock32 ws2_32)
+if(WIN32)
+	target_link_libraries(boostmain ${Boost_LIBRARIES}
+		wsock32 ws2_32)
+else(WIN32)
+	target_link_libraries(boostmain ${Boost_LIBRARIES})
+endif(WIN32)
 
 add_executable(opencvmain opencvmain.cpp)
 target_include_directories(opencvmain PRIVATE ${OpenCV_INCLUDE_DIRS})
@@ -46,6 +52,7 @@ add_executable(computemain
 target_include_directories(computemain PRIVATE ${Boost_INCLUDE_DIR}
 	"${PROJECT_SOURCE_DIR}/clew/include"
 	"${PROJECT_SOURCE_DIR}/clew/include/proxy-opencl"
+	"${PROJECT_SOURCE_DIR}/compute/include"
 	)
 target_link_libraries(computemain clew ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 

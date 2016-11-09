@@ -11,10 +11,8 @@
 //#include <boost/compute/utility/source.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "get_file_contents.h"
-#include "byte_pos_mappings.h"
-#include "descramble-mappings.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+/*#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"*/
 
 namespace compute = boost::compute;
 
@@ -26,12 +24,6 @@ struct ShaderTest::impl
 		queue(context, gpu),
 		m_inputfile(inputfile),
 		m_outputfile(outputfile),
-		m_gpu_mapping_x(2048, context),
-		m_gpu_mapping_y(2048, context),
-		m_gpu_byte_pos_mappings_x0(512, context),
-		m_gpu_byte_pos_mappings_x1(512, context),
-		m_gpu_byte_pos_mappings_x2(512, context),
-		m_gpu_byte_pos_mappings_x3(512, context)
 	{
 		std::cout << "OpenCL Device: " << gpu.name() << std::endl;
     	std::cout << "Vender: " << gpu.vendor() << std::endl;
@@ -41,18 +33,6 @@ struct ShaderTest::impl
     	std::cout << "Max Width: " << gpu.get_info<size_t>(CL_DEVICE_IMAGE2D_MAX_WIDTH) << std::endl;
     	std::cout << "Max Height: " << gpu.get_info<size_t>(CL_DEVICE_IMAGE2D_MAX_HEIGHT) << std::endl;
 
-		boost::compute::copy(
-				mapping_x, mapping_x + 2048, m_gpu_mapping_x.begin(), queue);
-		boost::compute::copy(
-				mapping_y, mapping_y + 2048, m_gpu_mapping_y.begin(), queue);
-		boost::compute::copy(
-				byte_pos_mappings_x0, byte_pos_mappings_x0 + 512, m_gpu_byte_pos_mappings_x0.begin(), queue);
-		boost::compute::copy(
-				byte_pos_mappings_x1, byte_pos_mappings_x1 + 512, m_gpu_byte_pos_mappings_x1.begin(), queue);
-		boost::compute::copy(
-				byte_pos_mappings_x2, byte_pos_mappings_x2 + 512, m_gpu_byte_pos_mappings_x2.begin(), queue);
-		boost::compute::copy(
-				byte_pos_mappings_x3, byte_pos_mappings_x3 + 512, m_gpu_byte_pos_mappings_x3.begin(), queue);
 
     	auto image = cv::imread(inputfile, CV_LOAD_IMAGE_COLOR);
 
@@ -114,12 +94,12 @@ struct ShaderTest::impl
 	boost::compute::vector<float> loadmask(const char* filename, int &w, int &h)
 	{
 		int depth;
-    	unsigned char* mask = stbi_load(filename, &w, &h, &depth, 1);
+    	unsigned char* mask;// = stbi_load(filename, &w, &h, &depth, 1);
 		std::vector<float> mask_vector(w*h);
 		for (int i = 0; i < (w*h); i++) {
 			mask_vector[i] = mask[i] / 255.0f;
 		}
-		stbi_image_free(mask);
+		//stbi_image_free(mask);
 		boost::compute::vector<float> device_mask(w*h, context);
 
     	// copy data to the device
@@ -154,12 +134,6 @@ struct ShaderTest::impl
 
 		image_kernel.set_arg(0, gpu_image);
 		image_kernel.set_arg(1, output_buffer);
-		image_kernel.set_arg(2, m_gpu_mapping_x);
-		image_kernel.set_arg(3, m_gpu_mapping_y);
-		image_kernel.set_arg(4, m_gpu_byte_pos_mappings_x0);
-		image_kernel.set_arg(5, m_gpu_byte_pos_mappings_x1);
-		image_kernel.set_arg(6, m_gpu_byte_pos_mappings_x2);
-		image_kernel.set_arg(7, m_gpu_byte_pos_mappings_x3);
 		image_kernel.set_arg(8, 0); //offset
 		size_t origin[2] = { 0, 0 };
 		size_t region[2] = { 512, m_output_height };
@@ -183,12 +157,6 @@ struct ShaderTest::impl
 
 		image_kernel.set_arg(0, gpu_image);
 		image_kernel.set_arg(1, output_buffer);
-		image_kernel.set_arg(2, m_gpu_mapping_x);
-		image_kernel.set_arg(3, m_gpu_mapping_y);
-		image_kernel.set_arg(4, m_gpu_byte_pos_mappings_x0);
-		image_kernel.set_arg(5, m_gpu_byte_pos_mappings_x1);
-		image_kernel.set_arg(6, m_gpu_byte_pos_mappings_x2);
-		image_kernel.set_arg(7, m_gpu_byte_pos_mappings_x3);
 		image_kernel.set_arg(8, offset);
 		size_t origin[2] = { 0, 0 };
 		size_t region[2] = { 512, m_output_height };
@@ -223,12 +191,6 @@ struct ShaderTest::impl
 
 		image_kernel.set_arg(0, output_buffer);
 		image_kernel.set_arg(1, gpu_out_image);
-		image_kernel.set_arg(2, m_gpu_mapping_x);
-		image_kernel.set_arg(3, m_gpu_mapping_y);
-		image_kernel.set_arg(4, m_gpu_byte_pos_mappings_x0);
-		image_kernel.set_arg(5, m_gpu_byte_pos_mappings_x1);
-		image_kernel.set_arg(6, m_gpu_byte_pos_mappings_x2);
-		image_kernel.set_arg(7, m_gpu_byte_pos_mappings_x3);
 		size_t origin[2] = { 0, 0 };
 		size_t region[2] = { 512, m_output_height};
 		queue.enqueue_nd_range_kernel(image_kernel, 2, origin, region, 0);
@@ -273,12 +235,6 @@ struct ShaderTest::impl
 	boost::compute::image2d gpu_out_image;
 	boost::compute::vector<unsigned char> output_buffer;
 	size_t m_output_height;
-	boost::compute::vector<int> m_gpu_mapping_x;
-	boost::compute::vector<int> m_gpu_mapping_y;
-	boost::compute::vector<int> m_gpu_byte_pos_mappings_x0;
-	boost::compute::vector<int> m_gpu_byte_pos_mappings_x1;
-	boost::compute::vector<int> m_gpu_byte_pos_mappings_x2;
-	boost::compute::vector<int> m_gpu_byte_pos_mappings_x3;
 	std::string m_outputfile;
 	std::string m_inputfile;
 };
